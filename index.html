@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SiteCrew Attendance — Kugan Solutions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+:root{
+  --bg:#14161A; --panel:#1E2127; --panel2:#262A32; --line:#33373F;
+  --amber:#FFB800; --green:#3DDC84; --red:#FF5252; --blue:#4DA3FF;
+  --text:#E8EAED; --muted:#8A919E;
+  --disp:'Oswald',sans-serif; --body:'Inter',system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;min-height:100vh}
+.wrap{max-width:520px;margin:0 auto;padding:16px 14px 90px}
+.admin .wrap{max-width:860px}
+header{display:flex;align-items:center;justify-content:space-between;padding:10px 2px 16px}
+.logo{font-family:var(--disp);font-weight:700;font-size:20px;letter-spacing:.08em;text-transform:uppercase}
+.logo b{color:var(--amber)}
+.logo small{display:block;font-family:var(--body);font-weight:500;font-size:10px;letter-spacing:.18em;color:var(--muted)}
+.hbtn{background:var(--panel);border:1px solid var(--line);color:var(--muted);font-family:var(--body);font-size:12px;font-weight:600;padding:8px 12px;border-radius:8px;cursor:pointer}
+.hazard{height:6px;border-radius:3px;margin-bottom:16px;
+  background:repeating-linear-gradient(-45deg,var(--amber) 0 12px,#1A1C20 12px 24px)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.card h3{font-family:var(--disp);font-weight:600;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}
+.btn{display:block;width:100%;border:none;border-radius:12px;padding:15px;font-family:var(--disp);font-size:17px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;text-align:center}
+.btn-amber{background:var(--amber);color:#14161A}
+.btn-green{background:var(--green);color:#0B1F14}
+.btn-red{background:transparent;border:1.5px solid var(--red);color:var(--red)}
+.btn-ghost{background:var(--panel2);border:1px solid var(--line);color:var(--text)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn+.btn{margin-top:10px}
+select,input[type=text],input[type=password],textarea{
+  width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+  color:var(--text);font-family:var(--body);font-size:15px;padding:13px;margin-bottom:12px;outline:none}
+select:focus,input:focus,textarea:focus{border-color:var(--amber)}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.clockbig{font-family:var(--disp);font-weight:700;font-size:52px;line-height:1;text-align:center;letter-spacing:.04em}
+.clockbig small{display:block;font-family:var(--body);font-size:13px;font-weight:500;color:var(--muted);letter-spacing:.1em;margin-top:6px}
+.pill{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;padding:4px 10px;border-radius:20px;text-transform:uppercase}
+.p-green{background:rgba(61,220,132,.15);color:var(--green)}
+.p-amber{background:rgba(255,184,0,.15);color:var(--amber)}
+.p-red{background:rgba(255,82,82,.15);color:var(--red)}
+.p-blue{background:rgba(77,163,255,.15);color:var(--blue)}
+.p-grey{background:rgba(138,145,158,.15);color:var(--muted)}
+.gpsbox{display:flex;align-items:center;gap:12px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px}
+.gpsdot{width:12px;height:12px;border-radius:50%;flex-shrink:0;background:var(--muted)}
+.gpsdot.ok{background:var(--green);box-shadow:0 0 10px rgba(61,220,132,.6)}
+.gpsdot.bad{background:var(--red);box-shadow:0 0 10px rgba(255,82,82,.6)}
+.gpsdot.wait{background:var(--amber);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.3}}
+.gpsbox .t{font-size:13px;line-height:1.45}
+.gpsbox .t b{font-size:13px}
+.gpsbox .t span{color:var(--muted);font-size:12px;display:block}
+.photoframe{position:relative;width:100%;aspect-ratio:4/3;background:var(--panel2);border:1.5px dashed var(--line);border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:12px;cursor:pointer}
+.photoframe img{width:100%;height:100%;object-fit:cover}
+.photoframe .ph{color:var(--muted);text-align:center;font-size:13px;padding:20px}
+.photoframe .ph .ico{font-size:34px;display:block;margin-bottom:8px}
+.board{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.boardcell{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:10px;padding:12px}
+.boardcell .num{font-family:var(--disp);font-weight:700;font-size:34px;line-height:1}
+.boardcell .lbl{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+.boardcell.g{border-left-color:var(--green)} .boardcell.r{border-left-color:var(--red)}
+.boardcell.b{border-left-color:var(--blue)} .boardcell.gr{border-left-color:var(--muted)}
+.wrow{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.wrow:last-child{border-bottom:none}
+.avatar{width:44px;height:44px;border-radius:10px;background:var(--panel2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:600;font-size:16px;color:var(--amber);overflow:hidden}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.wrow .info{flex:1;min-width:0}
+.wrow .info b{display:block;font-size:14px}
+.wrow .info span{font-size:12px;color:var(--muted)}
+.wrow .right{text-align:right;flex-shrink:0}
+.wrow .right .time{font-family:var(--disp);font-weight:600;font-size:15px}
+.flagtxt{font-size:11px;color:var(--red);font-weight:600}
+.stack{display:flex;gap:10px}
+.stack .btn{flex:1}
+.note{font-size:12px;color:var(--muted);line-height:1.5;margin-top:10px}
+.divider{height:1px;background:var(--line);margin:14px 0}
+.hidden{display:none!important}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--amber);color:var(--text);padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:99;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.tabs{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto}
+.tab{background:var(--panel);border:1px solid var(--line);color:var(--muted);font-size:13px;font-weight:600;padding:9px 14px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.tab.on{background:var(--amber);color:#14161A;border-color:var(--amber)}
+.checkline{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;color:var(--muted)}
+.checkline input{width:auto;margin:0}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:600;text-transform:uppercase;font-size:10px;letter-spacing:.08em}
+.connbar{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);padding:6px 2px}
+.conndot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.conndot.on{background:var(--green)}
+.conndot.off{background:var(--amber)}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script>
+/* =============================================================
+   FIREBASE CONFIG — PASTE YOUR CONFIG HERE
+   Firebase Console → Project Settings → Your apps → Web app
+   Same style as your FleetGuard Pro setup.
+============================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyBeGxj2j3oMLkSfc4cyWeAnSuqYBoZbnYA",
+  authDomain: "sitecrew-433be.firebaseapp.com",
+  databaseURL: "https://sitecrew-433be-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "sitecrew-433be",
+  storageBucket: "sitecrew-433be.firebasestorage.app",
+  messagingSenderId: "26606662492",
+  appId: "1:26606662492:web:7a54aa3de6f5e42d3b8799",
+  measurementId: "G-CDJ2C05Y5D"
+};
+
+let db=null, fbOK=false;
+try{
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+  fbOK=true;
+}catch(e){ console.error(e); }
+
+/* ================= STATIC CONFIG ================= */
+const SITES = [
+  {id:'ringlet',   name:'Ringlet',    lat:4.4280, lng:101.3770, radius:300, pic:'Mr. Hoo'},
+  {id:'tanahrata', name:'Tanah Rata', lat:4.4720, lng:101.3770, radius:300, pic:'Siva Boss'},
+  {id:'brinchang', name:'Brinchang',  lat:4.4960, lng:101.3880, radius:300, pic:'Mr. Hoo'},
+  {id:'lojing',    name:'Lojing',     lat:4.6330, lng:101.3500, radius:400, pic:'Siva Boss'},
+  {id:'ipoh',      name:'Ipoh',       lat:4.5970, lng:101.0900, radius:400, pic:'Site PIC'},
+];
+const WORK_START = 8*60;
+const OT_AFTER_HRS = 8;
+const todayKey = () => new Date().toISOString().slice(0,10);
+
+/* ================= LIVE DATA (real-time from RTDB) =================
+   Structure:
+   workers/{workerId}            {name, desig, company}
+   attendance/{date}/{workerId}  {in, out, site, photo, ...}
+   leaves/{date}/{workerId}      "MC" | "Annual" | "Absent"
+==================================================================== */
+let workers = [];
+let records = {};
+let leaves  = {};
+let unsubs = [];
+
+function startListeners(){
+  if(!fbOK) return;
+  unsubs.forEach(u=>u.ref.off('value',u.cb)); unsubs=[];
+  const track=(ref,cb)=>{ ref.on('value',cb); unsubs.push({ref,cb}); };
+
+  track(db.ref('workers'), snap=>{
+    const v=snap.val()||{};
+    workers = Object.entries(v).map(([id,w])=>({id,...w}))
+      .sort((a,b)=>a.name.localeCompare(b.name));
+    softRefresh();
+  });
+  track(db.ref('attendance/'+todayKey()), snap=>{
+    records = snap.val()||{};
+    softRefresh();
+  });
+  track(db.ref('leaves/'+todayKey()), snap=>{
+    leaves = snap.val()||{};
+    softRefresh();
+  });
+}
+function softRefresh(){
+  // re-render only list-type views so we don't wipe user input mid-clockin
+  if(view==='admin') renderAdmin();
+  if(view==='worker') renderWorkerLogin();
+  if(view==='status' && currentWorker){ render(); }
+  if(view==='home') {} // nothing dynamic
+}
+
+/* ================= STATE ================= */
+let view='home', currentWorker=null, photoData=null, demoGPS=false, adminTab='live';
+let gps={status:'idle'};
+
+const $=id=>document.getElementById(id);
+const app=$('app');
+const fmtTime=d=>d.toTimeString().slice(0,5);
+const nowStr=()=>new Date().toLocaleString('en-MY',{hour:'2-digit',minute:'2-digit',hour12:true,day:'2-digit',month:'short',year:'numeric'});
+function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2800);}
+function haversine(lat1,lng1,lat2,lng2){
+  const R=6371000,toRad=x=>x*Math.PI/180;
+  const dLat=toRad(lat2-lat1),dLng=toRad(lng2-lng1);
+  const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  return Math.round(R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
+}
+
+/* ================= RENDER ================= */
+function render(){
+  document.body.classList.toggle('admin',view==='admin');
+  if(!fbOK) return renderSetup();
+  if(view==='home')renderHome();
+  else if(view==='worker')renderWorkerLogin();
+  else if(view==='clockin')renderClockIn();
+  else if(view==='status')renderStatus();
+  else if(view==='admin')renderAdmin();
+  window.scrollTo(0,0);
+}
+function header(sub){
+  return `<header>
+    <div class="logo">SITE<b>CREW</b><small>${sub||'KUGAN SOLUTIONS · ATTENDANCE'}</small></div>
+    <button class="hbtn" onclick="goHome()">⌂ Home</button>
+  </header><div class="hazard"></div>
+  <div class="connbar"><div class="conndot ${navigator.onLine?'on':'off'}"></div>${navigator.onLine?'Online · synced to cloud':'Offline · will sync when signal returns'}</div>`;
+}
+window.goHome=()=>{view='home';currentWorker=null;photoData=null;render();};
+
+/* ---------- SETUP SCREEN (before config pasted) ---------- */
+function renderSetup(){
+  app.innerHTML=`
+  <header><div class="logo">SITE<b>CREW</b><small>SETUP REQUIRED</small></div></header>
+  <div class="hazard"></div>
+  <div class="card">
+    <h3>Firebase Not Configured</h3>
+    <p class="note" style="margin-top:0">Open this HTML file in a text editor and paste your Firebase config at the top of the &lt;script&gt; section (look for <b>PASTE_YOUR_API_KEY</b>).</p>
+    <div class="divider"></div>
+    <p class="note"><b>Setup steps (already halfway done!):</b><br>
+    1. Your Realtime Database is already created ✔<br>
+    2. Project Settings (⚙) → Your apps → Web (&lt;/&gt;) → Register app → copy the config object<br>
+    3. Paste config into this file — make sure <b>databaseURL</b> matches the link shown in your Realtime Database "Data" tab<br>
+    4. Realtime Database → Rules tab → set read/write to true (test mode)<br>
+    5. Deploy to GitHub Pages → open Admin → Workers tab → add your workers</p>
+  </div>`;
+}
+
+/* ---------- HOME ---------- */
+function renderHome(){
+  app.innerHTML=`
+  ${header()}
+  <div class="card" style="text-align:center;padding:28px 16px">
+    <div class="clockbig" id="liveclock">${fmtTime(new Date())}<small>${new Date().toDateString().toUpperCase()}</small></div>
+  </div>
+  <button class="btn btn-amber" onclick="openWorker()">👷 Worker Clock In / Out</button>
+  <button class="btn btn-ghost" onclick="openAdmin()">🗂 Admin Dashboard</button>
+  <p class="note" style="text-align:center">Cloud version · All devices sync live via Firebase<br>Admin passcode: <b>1234</b></p>`;
+}
+window.openWorker=()=>{view='worker';render();};
+window.openAdmin=()=>{
+  const p=prompt('Admin passcode:');
+  if(p==='1234'){view='admin';render();}else if(p!==null)toast('Wrong passcode');
+};
+
+/* ---------- WORKER LOGIN ---------- */
+function renderWorkerLogin(){
+  if(view!=='worker')return;
+  app.innerHTML=`
+  ${header('WORKER LOGIN')}
+  <div class="card">
+    <h3>Select Your Name</h3>
+    ${workers.length?`
+    <select id="selWorker">
+      <option value="">— Choose worker —</option>
+      ${workers.map(w=>`<option value="${w.id}">${w.name} · ${w.desig}</option>`).join('')}
+    </select>
+    <button class="btn btn-amber" onclick="loginWorker()">Continue →</button>`
+    :`<p class="note" style="margin-top:0">No workers yet. Admin must add workers first (Admin Dashboard → Workers tab).</p>`}
+  </div>`;
+}
+window.loginWorker=()=>{
+  const id=$('selWorker').value;
+  if(!id)return toast('Please select your name');
+  currentWorker=workers.find(w=>w.id===id);
+  view = records[id] ? 'status' : 'clockin';
+  photoData=null;gps={status:'idle'};
+  render();
+};
+
+/* ---------- CLOCK IN ---------- */
+function renderClockIn(){
+  const w=currentWorker;
+  app.innerHTML=`
+  ${header('CLOCK IN')}
+  <div class="card">
+    <div class="eyebrow">Worker</div>
+    <div style="font-family:var(--disp);font-size:22px;font-weight:600;margin:4px 0 2px">${w.name}</div>
+    <span class="pill p-blue">${w.desig}</span> <span class="pill p-grey">${w.company}</span>
+  </div>
+  <div class="card">
+    <h3>1 · Site & Location</h3>
+    <label>Work site today</label>
+    <select id="selSite" onchange="checkGPS()">
+      ${SITES.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}
+    </select>
+    <div class="gpsbox">
+      <div class="gpsdot" id="gpsdot"></div>
+      <div class="t" id="gpstxt"><b>GPS not checked</b><span>Tap "Check my location" below</span></div>
+    </div>
+    <button class="btn btn-ghost" onclick="checkGPS()">📍 Check My Location</button>
+    <div class="checkline" style="margin-top:10px">
+      <input type="checkbox" id="demoGps" onchange="demoGPS=this.checked;checkGPS()">
+      <span>Demo mode — simulate GPS at selected site</span>
+    </div>
+  </div>
+  <div class="card">
+    <h3>2 · Selfie / Site Photo</h3>
+    <div class="photoframe" onclick="$('photoInput').click()">
+      <div class="ph"><span class="ico">📷</span>Tap to open camera<br><small>Time, date & GPS stamped on photo</small></div>
+    </div>
+    <input type="file" id="photoInput" accept="image/*" capture="user" class="hidden" onchange="handlePhoto(this)">
+  </div>
+  <div class="card">
+    <h3>3 · Today's Work Activity</h3>
+    <textarea id="activity" rows="2" placeholder="e.g. Cut & fill at CH 2+400, loading to LBS dumping site"></textarea>
+  </div>
+  <button class="btn btn-green" id="btnClockIn" onclick="doClockIn()" disabled>✔ CLOCK IN NOW</button>
+  <p class="note" id="clockinNote">Complete GPS check + photo to enable clock in.</p>`;
+}
+
+window.checkGPS=()=>{
+  const site=SITES.find(s=>s.id===$('selSite').value);
+  const dot=$('gpsdot'),txt=$('gpstxt');
+  if(demoGPS||$('demoGps')?.checked){
+    demoGPS=true;
+    gps={status:'ok',lat:site.lat,lng:site.lng,acc:5,site,dist:12,inFence:true};
+    dot.className='gpsdot ok';
+    txt.innerHTML=`<b>Inside geofence ✔ (DEMO)</b><span>${site.name} · 12 m from site point</span>`;
+    updateBtn();return;
+  }
+  dot.className='gpsdot wait';
+  txt.innerHTML='<b>Getting GPS…</b><span>Make sure location is ON</span>';
+  if(!navigator.geolocation){dot.className='gpsdot bad';txt.innerHTML='<b>GPS not supported</b><span>Use demo mode</span>';return;}
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const{latitude:lat,longitude:lng,accuracy:acc}=pos.coords;
+    const dist=haversine(lat,lng,site.lat,site.lng);
+    const inFence=dist<=site.radius;
+    gps={status:'ok',lat,lng,acc:Math.round(acc),site,dist,inFence};
+    dot.className=inFence?'gpsdot ok':'gpsdot bad';
+    txt.innerHTML=inFence
+      ?`<b>Inside geofence ✔</b><span>${site.name} · ${dist} m from site point (±${Math.round(acc)} m)</span>`
+      :`<b>OUTSIDE geofence ✕</b><span>${dist>1000?(dist/1000).toFixed(1)+' km':dist+' m'} from ${site.name}. Will be flagged to admin.</span>`;
+    updateBtn();
+  },err=>{
+    gps={status:'fail'};dot.className='gpsdot bad';
+    txt.innerHTML=`<b>GPS failed</b><span>${err.message}. Try open area or demo mode.</span>`;
+    updateBtn();
+  },{enableHighAccuracy:true,timeout:12000,maximumAge:0});
+};
+
+window.handlePhoto=(input)=>{
+  const file=input.files[0];if(!file)return;
+  const img=new Image();
+  img.onload=()=>{
+    // Compress hard: photo stored as base64 in RTDB, target ~50-90KB
+    const maxW=520,scale=Math.min(1,maxW/img.width);
+    const c=document.createElement('canvas');
+    c.width=img.width*scale;c.height=img.height*scale;
+    const ctx=c.getContext('2d');
+    ctx.drawImage(img,0,0,c.width,c.height);
+    const stripH=Math.max(44,c.height*0.13);
+    ctx.fillStyle='rgba(0,0,0,0.65)';
+    ctx.fillRect(0,c.height-stripH,c.width,stripH);
+    ctx.fillStyle='#FFB800';
+    ctx.font=`bold ${Math.round(stripH*0.3)}px Arial`;
+    ctx.fillText(nowStr(),10,c.height-stripH*0.55);
+    ctx.fillStyle='#FFF';
+    ctx.font=`${Math.round(stripH*0.25)}px Arial`;
+    const siteName=gps.site?gps.site.name:(SITES.find(s=>s.id===$('selSite').value)?.name||'');
+    const gpsTxt=gps.lat?`${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)}`:'GPS pending';
+    ctx.fillText(`${siteName} · ${gpsTxt} · ${currentWorker.name}`,10,c.height-stripH*0.18);
+    photoData=c.toDataURL('image/jpeg',0.55);
+    if(photoData.length>900000){ photoData=c.toDataURL('image/jpeg',0.35); } // safety cap on photo size
+    document.querySelector('.photoframe').innerHTML=`<img src="${photoData}">`;
+    updateBtn();
+  };
+  img.src=URL.createObjectURL(file);
+};
+
+function updateBtn(){
+  const btn=$('btnClockIn');if(!btn)return;
+  const ready=gps.status==='ok'&&photoData;
+  btn.disabled=!ready;
+  $('clockinNote').textContent=ready
+    ?(gps.inFence?'Ready. Record syncs live to admin dashboard.':'⚠ Outside geofence — clock in allowed but FLAGGED.')
+    :'Complete GPS check + photo to enable clock in.';
+}
+
+window.doClockIn=async()=>{
+  const btn=$('btnClockIn');btn.disabled=true;btn.textContent='SAVING…';
+  const now=new Date();
+  const mins=now.getHours()*60+now.getMinutes();
+  const rec={
+    date:todayKey(), workerId:currentWorker.id,
+    name:currentWorker.name, desig:currentWorker.desig, company:currentWorker.company,
+    in:now.toISOString(),
+    site:gps.site.id, siteName:gps.site.name, pic:gps.site.pic,
+    lat:gps.lat, lng:gps.lng, dist:gps.dist, inFence:gps.inFence,
+    late:mins>WORK_START+10,
+    photo:photoData,
+    activity:$('activity').value.trim(),
+    out:null, hours:null, ot:null
+  };
+  try{
+    await db.ref('attendance/'+todayKey()+'/'+currentWorker.id).set(rec);
+    await db.ref('leaves/'+todayKey()+'/'+currentWorker.id).remove().catch(()=>{});
+    toast(`🔔 Synced. PIC: ${gps.site.pic} (${gps.site.name})`);
+    view='status';render();
+  }catch(e){
+    // Offline persistence: write is queued locally, will sync later
+    toast('Saved offline — will sync when signal returns');
+    view='status';records[currentWorker.id]=rec;render();
+  }
+};
+
+/* ---------- WORKER STATUS ---------- */
+function renderStatus(){
+  const w=currentWorker,r=records[w.id];
+  if(!r){view='clockin';return render();}
+  const inT=new Date(r.in),outT=r.out?new Date(r.out):null;
+  app.innerHTML=`
+  ${header('MY ATTENDANCE')}
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div class="eyebrow">Worker</div>
+        <div style="font-family:var(--disp);font-size:22px;font-weight:600;margin:4px 0">${w.name}</div>
+        <span class="pill p-blue">${w.desig}</span>
+      </div>
+      <span class="pill ${outT?'p-grey':'p-green'}">${outT?'CLOCKED OUT':'ON SITE'}</span>
+    </div>
+    <div class="divider"></div>
+    <table>
+      <tr><td style="color:var(--muted)">Clock in</td><td><b>${fmtTime(inT)}</b> ${r.late?'<span class="flagtxt">LATE</span>':''}</td></tr>
+      <tr><td style="color:var(--muted)">Site</td><td><b>${r.siteName}</b> ${r.inFence?'<span class="pill p-green">In fence</span>':'<span class="pill p-red">Outside fence</span>'}</td></tr>
+      <tr><td style="color:var(--muted)">GPS</td><td>${r.lat?.toFixed(5)}, ${r.lng?.toFixed(5)} (${r.dist} m)</td></tr>
+      <tr><td style="color:var(--muted)">Activity</td><td>${r.activity||'<i style="color:var(--muted)">Not stated</i>'}</td></tr>
+      ${outT?`<tr><td style="color:var(--muted)">Clock out</td><td><b>${fmtTime(outT)}</b></td></tr>
+      <tr><td style="color:var(--muted)">Total hours</td><td><b>${r.hours} hrs</b> ${r.ot>0?`<span class="pill p-amber">OT ${r.ot} hr</span>`:''}</td></tr>`:''}
+    </table>
+  </div>
+  ${r.photo?`<div class="card"><h3>Clock-in Photo</h3><img src="${r.photo}" style="width:100%;border-radius:10px"></div>`:''}
+  ${!outT?`<button class="btn btn-red" onclick="doClockOut()">⏏ CLOCK OUT</button>`:`<p class="note" style="text-align:center">Attendance complete for today 👊</p>`}
+  <button class="btn btn-ghost" onclick="goHome()">Back to Home</button>`;
+}
+window.doClockOut=async()=>{
+  const r=records[currentWorker.id];
+  const now=new Date(),inT=new Date(r.in);
+  const hrs=Math.round(((now-inT)/3600000)*10)/10;
+  const upd={out:now.toISOString(),hours:hrs,ot:Math.max(0,Math.round((hrs-OT_AFTER_HRS)*10)/10)};
+  try{
+    await db.ref('attendance/'+todayKey()+'/'+currentWorker.id).update(upd);
+    toast(`Clocked out · ${hrs} hrs${upd.ot>0?' · OT '+upd.ot+' hr':''}`);
+  }catch(e){ toast('Saved offline — will sync later'); Object.assign(r,upd); render(); }
+};
+
+/* ---------- ADMIN ---------- */
+function renderAdmin(){
+  if(view!=='admin')return;
+  const present=Object.keys(records).length;
+  const inSite=Object.values(records).filter(r=>!r.out).length;
+  const mc=Object.values(leaves).filter(v=>v==='MC').length;
+  const annual=Object.values(leaves).filter(v=>v==='Annual').length;
+  const absent=workers.filter(w=>!records[w.id]&&!leaves[w.id]).length+Object.values(leaves).filter(v=>v==='Absent').length;
+  const flags=Object.values(records).filter(r=>!r.inFence||r.late).length;
+  app.innerHTML=`
+  ${header('ADMIN · '+new Date().toDateString().toUpperCase())}
+  <div class="board">
+    <div class="boardcell g"><div class="num">${present}</div><div class="lbl">Clocked In</div></div>
+    <div class="boardcell b"><div class="num">${inSite}</div><div class="lbl">Now On Site</div></div>
+    <div class="boardcell"><div class="num">${mc+annual}</div><div class="lbl">MC / Annual</div></div>
+    <div class="boardcell gr"><div class="num">${absent}</div><div class="lbl">Absent / No Info</div></div>
+    <div class="boardcell r"><div class="num">${flags}</div><div class="lbl">⚑ Flagged</div></div>
+    <div class="boardcell"><div class="num">${workers.length}</div><div class="lbl">Total Workforce</div></div>
+  </div>
+  <div class="tabs">
+    <div class="tab ${adminTab==='live'?'on':''}" onclick="setTab('live')">Live Attendance</div>
+    <div class="tab ${adminTab==='sites'?'on':''}" onclick="setTab('sites')">By Site</div>
+    <div class="tab ${adminTab==='leave'?'on':''}" onclick="setTab('leave')">Mark MC / Leave</div>
+    <div class="tab ${adminTab==='workers'?'on':''}" onclick="setTab('workers')">Workers</div>
+    <div class="tab ${adminTab==='export'?'on':''}" onclick="setTab('export')">Report & Export</div>
+  </div>
+  <div id="tabbody"></div>`;
+  renderAdminTab();
+}
+window.setTab=t=>{adminTab=t;renderAdmin();};
+
+function renderAdminTab(){
+  const body=$('tabbody');if(!body)return;
+  if(adminTab==='live'){
+    const rows=workers.map(w=>{
+      const r=records[w.id],lv=leaves[w.id];
+      let status,right='';
+      if(r){
+        const flags=[];if(r.late)flags.push('LATE');if(!r.inFence)flags.push('OUTSIDE FENCE');
+        status=`<b>${w.name}</b><span>${w.desig} · ${r.siteName} · ${r.activity||'no activity stated'}</span>${flags.length?`<span class="flagtxt">⚑ ${flags.join(' · ')}</span>`:''}`;
+        right=`<div class="time">${fmtTime(new Date(r.in))}${r.out?' – '+fmtTime(new Date(r.out)):''}</div>
+               <span class="pill ${r.out?'p-grey':'p-green'}">${r.out?(r.hours+' hrs'+(r.ot>0?' +OT':'')):'ON SITE'}</span>`;
+      }else if(lv){
+        status=`<b>${w.name}</b><span>${w.desig}</span>`;
+        right=`<span class="pill ${lv==='MC'?'p-amber':lv==='Annual'?'p-blue':'p-red'}">${lv.toUpperCase()}</span>`;
+      }else{
+        status=`<b style="color:var(--muted)">${w.name}</b><span>${w.desig}</span>`;
+        right=`<span class="pill p-grey">NOT IN</span>`;
+      }
+      const av=r&&r.photo?`<img src="${r.photo}">`:w.name.split(' ').map(x=>x[0]).slice(0,2).join('');
+      return `<div class="wrow"><div class="avatar">${av}</div><div class="info">${status}</div><div class="right">${right}</div></div>`;
+    }).join('');
+    body.innerHTML=`<div class="card">${rows||'<p class="note">No workers yet — add them in Workers tab.</p>'}</div>`;
+  }
+  if(adminTab==='sites'){
+    body.innerHTML=`<div class="card">${SITES.map(s=>{
+      const recs=Object.values(records).filter(r=>r.site===s.id);
+      const names=recs.map(r=>`${r.name}${!r.inFence?' ⚑':''}`).join(', ');
+      return `<div class="wrow">
+        <div class="info"><b>${s.name}</b><span>PIC: ${s.pic} · Geofence ${s.radius} m</span>
+        <span style="font-size:12px">${names||'<i style="color:var(--muted)">No workers clocked in</i>'}</span></div>
+        <div class="right"><div class="time" style="font-size:26px;font-family:var(--disp)">${recs.length}</div><span style="font-size:11px;color:var(--muted)">workers</span></div>
+      </div>`;
+    }).join('')}</div>`;
+  }
+  if(adminTab==='leave'){
+    body.innerHTML=`<div class="card"><h3>Mark Worker Status (today)</h3>${workers.map(w=>{
+      if(records[w.id])return`<div class="wrow"><div class="info"><b>${w.name}</b><span>Already clocked in</span></div><span class="pill p-green">PRESENT</span></div>`;
+      const lv=leaves[w.id]||'';
+      return`<div class="wrow"><div class="info"><b>${w.name}</b><span>${w.desig}</span></div>
+      <select style="width:130px;margin:0" onchange="setLeave('${w.id}',this.value)">
+        <option value="" ${!lv?'selected':''}>— Not set —</option>
+        <option value="MC" ${lv==='MC'?'selected':''}>MC</option>
+        <option value="Annual" ${lv==='Annual'?'selected':''}>Annual Leave</option>
+        <option value="Absent" ${lv==='Absent'?'selected':''}>Absent</option>
+      </select></div>`;
+    }).join('')||'<p class="note">No workers yet.</p>'}</div>`;
+  }
+  if(adminTab==='workers'){
+    body.innerHTML=`
+    <div class="card">
+      <h3>Add New Worker</h3>
+      <label>Full name</label>
+      <input type="text" id="nwName" placeholder="e.g. Ahmad bin Yusof">
+      <label>Designation</label>
+      <input type="text" id="nwDesig" placeholder="e.g. Excavator Operator" list="desigList">
+      <datalist id="desigList">
+        <option>General Worker</option><option>Excavator Operator</option>
+        <option>Dozer Operator</option><option>Lorry Driver</option>
+        <option>Site Supervisor</option><option>Chainman</option>
+        <option>Site Engineer</option><option>Surveyor</option>
+      </datalist>
+      <label>Company / Subcon</label>
+      <input type="text" id="nwCompany" placeholder="e.g. PRSK or Subcon - Bangla Team" list="coList">
+      <datalist id="coList">
+        <option>PRSK</option><option>Subcon - Bangla Team</option><option>Subcon - Machinery</option>
+      </datalist>
+      <button class="btn btn-amber" onclick="addWorker()">＋ Add Worker</button>
+      <p class="note">Added workers sync instantly to every worker's phone.</p>
+    </div>
+    <div class="card">
+      <h3>Current Workforce (${workers.length})</h3>
+      ${workers.map(w=>`
+        <div class="wrow">
+          <div class="avatar">${w.name.split(' ').map(x=>x[0]).slice(0,2).join('')}</div>
+          <div class="info"><b>${w.name}</b><span>${w.desig} · ${w.company}</span></div>
+          <button class="hbtn" style="color:var(--red);border-color:var(--red)" onclick="removeWorker('${w.id}','${w.name.replace(/'/g,"\\'")}')">Remove</button>
+        </div>`).join('')||'<p class="note">No workers yet.</p>'}
+    </div>`;
+  }
+  if(adminTab==='export'){
+    body.innerHTML=`
+    <div class="card">
+      <h3>Morning WhatsApp Summary</h3>
+      <textarea id="waSummary" rows="8" readonly>${buildSummary()}</textarea>
+      <div class="stack">
+        <button class="btn btn-ghost" onclick="copySummary()">📋 Copy</button>
+        <button class="btn btn-green" onclick="sendWA()">💬 WhatsApp</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Payroll Export (CSV)</h3>
+      <p class="note" style="margin:0 0 12px">Today's attendance, hours & OT. Full version: monthly range picker.</p>
+      <button class="btn btn-amber" onclick="exportCSV()">⬇ Download CSV</button>
+    </div>`;
+  }
+}
+
+window.setLeave=async(id,v)=>{
+  const ref=db.ref('leaves/'+todayKey()+'/'+id);
+  if(v)await ref.set(v);
+  else await ref.remove();
+};
+window.addWorker=async()=>{
+  const name=$('nwName').value.trim(),desig=$('nwDesig').value.trim()||'General Worker',company=$('nwCompany').value.trim()||'PRSK';
+  if(!name)return toast('Enter worker name');
+  await db.ref('workers').push({name,desig,company,createdAt:new Date().toISOString()});
+  toast(name+' added ✔');
+};
+window.removeWorker=async(id,name)=>{
+  if(!confirm('Remove '+name+'? Attendance history stays in database.'))return;
+  await db.ref('workers/'+id).remove();
+};
+
+function buildSummary(){
+  const d=new Date().toLocaleDateString('en-MY',{day:'2-digit',month:'short',year:'numeric'});
+  let out=`*PRSK ATTENDANCE SUMMARY*\n📅 ${d} · ${fmtTime(new Date())}\n`;
+  SITES.forEach(s=>{
+    const recs=Object.values(records).filter(r=>r.site===s.id);
+    if(recs.length)out+=`\n📍 *${s.name}* — ${recs.length} in\n`+recs.map(r=>`  • ${r.name} (${fmtTime(new Date(r.in))})${r.late?' ⚠late':''}${!r.inFence?' ⚑outside':''}`).join('\n')+'\n';
+  });
+  const mcs=Object.entries(leaves).map(([id,v])=>`  • ${workers.find(w=>w.id===id)?.name||id} — ${v}`);
+  if(mcs.length)out+=`\n🏥 *MC / Leave / Absent*\n${mcs.join('\n')}\n`;
+  const noInfo=workers.filter(w=>!records[w.id]&&!leaves[w.id]);
+  if(noInfo.length)out+=`\n❓ *No info yet*\n${noInfo.map(w=>'  • '+w.name).join('\n')}\n`;
+  out+=`\n_Total: ${Object.keys(records).length}/${workers.length} clocked in_\n— SiteCrew by Kugan Solutions`;
+  return out;
+}
+window.copySummary=()=>{navigator.clipboard.writeText($('waSummary').value).then(()=>toast('Copied!'));};
+window.sendWA=()=>{window.open('https://wa.me/?text='+encodeURIComponent($('waSummary').value),'_blank');};
+window.exportCSV=()=>{
+  let csv='Name,Designation,Company,Site,Clock In,Clock Out,Hours,OT,Late,Geofence,Status,Activity\n';
+  workers.forEach(w=>{
+    const r=records[w.id],lv=leaves[w.id];
+    if(r){
+      csv+=[w.name,w.desig,w.company,r.siteName,fmtTime(new Date(r.in)),r.out?fmtTime(new Date(r.out)):'',r.hours??'',r.ot??'',r.late?'LATE':'',r.inFence?'OK':'OUTSIDE','PRESENT',`"${(r.activity||'').replace(/"/g,"'")}"`].join(',')+'\n';
+    }else{
+      csv+=[w.name,w.desig,w.company,'','','','','','','',lv||'NO INFO',''].join(',')+'\n';
+    }
+  });
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=`attendance_${todayKey()}.csv`;a.click();
+  toast('CSV downloaded');
+};
+
+window.addEventListener('online',()=>render());
+window.addEventListener('offline',()=>render());
+startListeners();
+render();
+</script>
+</body>
+</html>
