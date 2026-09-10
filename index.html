@@ -549,10 +549,23 @@ function renderAdminTab(){
       <p class="note">Added workers sync instantly to every worker's phone.</p>
     </div>
     <div class="card">
+      <h3>Bulk Import from Excel</h3>
+      <p class="note" style="margin:0 0 10px">
+        Copy the columns from your sheet and paste below — one worker per line, in this order:<br>
+        <b>Name — Designation — Company</b><br>
+        Designation and Company are optional (default: General Worker · PRSK).
+      </p>
+      <textarea id="bulkBox" rows="7" placeholder="Ahmad bin Yusof&#9;Excavator Operator&#9;PRSK
+Rahman Ali&#9;General Worker&#9;Subcon - Bangla Team
+Kumar a/l Samy&#9;Lorry Driver&#9;PRSK"></textarea>
+      <button class="btn btn-ghost" onclick="previewBulk()">Preview</button>
+      <div id="bulkPreview" style="margin-top:10px"></div>
+    </div>
+    <div class="card">
       <h3>Current Workforce (${workers.length})</h3>
       ${workers.map(w=>`
         <div class="wrow">
-          <div class="avatar">${w.name.split(' ').map(x=>x[0]).slice(0,2).join('')}</div>
+          <div class="avatar">${(w.name||'?').split(/\s+/).filter(Boolean).map(x=>x[0]).slice(0,2).join('').toUpperCase()}</div>
           <div class="info"><b>${w.name}</b><span>${w.desig} · ${w.company}</span></div>
           <button class="hbtn" style="color:var(--red);border-color:var(--red)" onclick="removeWorker('${w.id}','${w.name.replace(/'/g,"\\'")}')">Remove</button>
         </div>`).join('')||'<p class="note">No workers yet.</p>'}
@@ -582,10 +595,107 @@ window.setLeave=async(id,v)=>{
   else await ref.remove();
 };
 window.addWorker=async()=>{
-  const name=$('nwName').value.trim(),desig=$('nwDesig').value.trim()||'General Worker',company=$('nwCompany').value.trim()||'PRSK';
+  if(!fbOK||!db) return toast('Not connected to database');
+  const name=$('nwName').value.replace(/\s+/g,' ').trim();
+  const desig=$('nwDesig').value.trim()||'General Worker';
+  const company=$('nwCompany').value.trim()||'PRSK';
   if(!name)return toast('Enter worker name');
-  await db.ref('workers').push({name,desig,company,createdAt:new Date().toISOString()});
-  toast(name+' added ✔');
+  if(workers.some(w=>w.name.toLowerCase()===name.toLowerCase()))
+    return toast(name+' is already in the list');
+  const btn=event&&event.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    await db.ref('workers').push({name,desig,company,createdAt:new Date().toISOString()});
+    $('nwName').value='';
+    toast(name+' added ✔');
+  }catch(e){
+    console.error(e);
+    toast('Could not save: '+(e.message||e));
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='＋ Add Worker';}
+  }
+};
+
+/* ---------- BULK IMPORT ---------- */
+function parseBulk(text){
+  const rows=[];
+  text.split(/\r?\n/).forEach(line=>{
+    if(!line.trim())return;
+    // accept tab (Excel paste), comma, or semicolon
+    const parts=line.split(/\t|,|;/).map(s=>s.replace(/^"|"$/g,'').replace(/\s+/g,' ').trim());
+    const name=parts[0]||'';
+    if(!name)return;
+    // skip a header row
+    if(/^(name|full ?name|nama)$/i.test(name))return;
+    rows.push({
+      name,
+      desig:parts[1]||'General Worker',
+      company:parts[2]||'PRSK'
+    });
+  });
+  return rows;
+}
+window.previewBulk=()=>{
+  const rows=parseBulk($('bulkBox').value);
+  const box=$('bulkPreview');
+  if(!rows.length){box.innerHTML='<p class="note">Nothing to import yet — paste your list above.</p>';return;}
+  const seen=new Set(), dupExisting=[], dupInPaste=[], ok=[];
+  const existing=new Set(workers.map(w=>w.name.toLowerCase()));
+  rows.forEach(r=>{
+    const k=r.name.toLowerCase();
+    if(existing.has(k)) dupExisting.push(r.name);
+    else if(seen.has(k)) dupInPaste.push(r.name);
+    else { seen.add(k); ok.push(r); }
+  });
+  window._bulkReady=ok;
+  box.innerHTML=`
+    <div class="note" style="margin-bottom:8px">
+      <b>${ok.length}</b> ready to add
+      ${dupExisting.length?` · <b>${dupExisting.length}</b> already in list (skipped)`:''}
+      ${dupInPaste.length?` · <b>${dupInPaste.length}</b> repeated in paste (skipped)`:''}
+    </div>
+    <div style="max-height:210px;overflow:auto;border:1px solid var(--line,#333);border-radius:8px">
+      ${ok.slice(0,300).map((r,i)=>`<div style="display:flex;gap:8px;padding:6px 9px;font-size:12px;border-bottom:1px solid rgba(255,255,255,.06)">
+        <span style="opacity:.5;min-width:26px">${i+1}</span>
+        <b style="flex:1">${r.name}</b>
+        <span style="opacity:.7">${r.desig}</span>
+        <span style="opacity:.5">${r.company}</span>
+      </div>`).join('')}
+    </div>
+    ${ok.length?`<button class="btn btn-green" style="margin-top:10px" onclick="commitBulk()">✔ Import ${ok.length} workers</button>`:''}
+    ${dupExisting.length?`<p class="note" style="margin-top:8px">Already in list: ${dupExisting.slice(0,15).join(', ')}${dupExisting.length>15?' …':''}</p>`:''}`;
+};
+window.commitBulk=async()=>{
+  const rows=window._bulkReady||[];
+  if(!rows.length)return toast('Nothing to import');
+  if(!fbOK||!db)return toast('Not connected to database');
+  if(!confirm('Import '+rows.length+' workers?'))return;
+  const btn=event&&event.target; if(btn){btn.disabled=true;}
+  const stamp=new Date().toISOString();
+  let done=0, failed=0;
+  try{
+    // write in batches so one bad row can't lose the whole import
+    for(let i=0;i<rows.length;i+=50){
+      const chunk=rows.slice(i,i+50);
+      const updates={};
+      chunk.forEach(r=>{
+        const key=db.ref('workers').push().key;
+        updates[key]={name:r.name,desig:r.desig,company:r.company,createdAt:stamp};
+      });
+      try{
+        await db.ref('workers').update(updates);
+        done+=chunk.length;
+      }catch(e){
+        console.error(e); failed+=chunk.length;
+      }
+      if(btn) btn.textContent=`Importing ${done}/${rows.length}…`;
+    }
+    if(failed) toast(`${done} added · ${failed} failed — check connection`);
+    else { toast(done+' workers imported ✔'); $('bulkBox').value=''; window._bulkReady=[]; }
+  }catch(e){
+    console.error(e); toast('Import failed: '+(e.message||e));
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='✔ Import';}
+  }
 };
 window.removeWorker=async(id,name)=>{
   if(!confirm('Remove '+name+'? Attendance history stays in database.'))return;
